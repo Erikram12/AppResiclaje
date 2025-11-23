@@ -44,7 +44,7 @@ print_step() {
 }
 
 # Variables
-APP_DIR="/home/ramsi/reciclaje-app"
+APP_DIR="$(pwd)"
 SERVICE_NAME="reciclaje-app"
 USER="ramsi"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -273,15 +273,6 @@ else
 fi
 
 check_success "Archivos de aplicación copiados"
-else
-    print_error "No se encontraron los archivos de la aplicación en $SCRIPT_DIR"
-    print_info "Asegúrate de ejecutar este script desde el directorio que contiene:"
-    print_info "  - backend/"
-    print_info "  - frontend/"
-    print_info "  - config/"
-    print_info "  - requirements.txt"
-    exit 1
-fi
 
 # Crear directorio de logs
 mkdir -p "$APP_DIR/logs"
@@ -420,7 +411,7 @@ cat > "$APP_DIR/start_app.sh" << 'EOF'
 #!/bin/bash
 
 # Script de inicio para Aplicación de Reciclaje Inteligente
-APP_DIR="/home/ramsi/reciclaje-app"
+APP_DIR="$(pwd)"
 LOG_FILE="$APP_DIR/logs/startup.log"
 
 # Función de logging
@@ -470,7 +461,7 @@ cat > "$APP_DIR/start_kiosk.sh" << 'EOF'
 #!/bin/bash
 
 # Script para iniciar Chromium en modo kiosk
-APP_DIR="/home/ramsi/reciclaje-app"
+APP_DIR="$(pwd)"
 LOG_FILE="$APP_DIR/logs/kiosk.log"
 URL="http://localhost:5000"
 
