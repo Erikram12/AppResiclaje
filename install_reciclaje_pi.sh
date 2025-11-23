@@ -91,37 +91,47 @@ if [ "$(whoami)" != "ramsi" ] && [ ! -d "/home/ramsi" ]; then
     exit 1
 fi
 
-print_header "PASO 1: ACTUALIZANDO SISTEMA"
+print_header "PASO 1: VERIFICANDO Y CONFIGURANDO SISTEMA"
+
+print_step "Verificando X11..."
+if systemctl is-active --quiet lightdm && DISPLAY=:0 xset q >/dev/null 2>&1; then
+    print_status "✅ X11 completamente instalado y funcionando"
+elif systemctl list-unit-files | grep -q lightdm.service; then
+    if systemctl is-active --quiet lightdm; then
+        print_status "✅ X11 instalado y activo"
+    else
+        print_warning "X11 instalado pero no activo, habilitando..."
+        sudo systemctl enable lightdm > /dev/null 2>&1
+        sudo systemctl start lightdm > /dev/null 2>&1
+        check_success "X11 habilitado"
+    fi
+else
+    print_warning "X11 no instalado, instalando componentes mínimos..."
+    sudo apt update > /dev/null 2>&1
+    sudo apt install -y \
+        xserver-xorg-core \
+        xserver-xorg-input-all \
+        xserver-xorg-video-fbdev \
+        xinit \
+        x11-xserver-utils \
+        lightdm \
+        openbox \
+        > /dev/null 2>&1 &
+    spinner $!
+    check_success "X11 mínimo instalado"
+
+    print_step "Habilitando X11..."
+    sudo systemctl enable lightdm > /dev/null 2>&1
+    sudo systemctl start lightdm > /dev/null 2>&1
+    check_success "X11 habilitado y iniciado"
+fi
 
 print_step "Actualizando lista de paquetes..."
 sudo apt update > /dev/null 2>&1 &
 spinner $!
 check_success "Lista de paquetes actualizada"
 
-print_step "Actualizando paquetes del sistema..."
-sudo apt upgrade -y > /dev/null 2>&1 &
-spinner $!
-check_success "Sistema actualizado"
-
-print_header "PASO 2: INSTALANDO X11 Y ENTORNO GRÁFICO MÍNIMO"
-
-print_step "Instalando servidor X11..."
-sudo apt install -y \
-    xserver-xorg \
-    xinit \
-    x11-xserver-utils \
-    xterm \
-    openbox \
-    lightdm \
-    > /dev/null 2>&1 &
-spinner $!
-check_success "Servidor X11 instalado"
-
-print_step "Configurando inicio automático de X11..."
-sudo systemctl enable lightdm > /dev/null 2>&1
-check_success "Inicio automático de X11 configurado"
-
-print_header "PASO 3: INSTALANDO CHROMIUM Y DEPENDENCIAS WEB"
+print_header "PASO 2: INSTALANDO NAVEGADORES Y DEPENDENCIAS WEB"
 
 print_step "Instalando navegadores y herramientas para LCD..."
 sudo apt install -y \
@@ -130,11 +140,27 @@ sudo apt install -y \
     unclutter \
     xdotool \
     fbset \
+    fbi \
     > /dev/null 2>&1 &
 spinner $!
 check_success "Navegadores y herramientas LCD instaladas"
 
-print_header "PASO 4: INSTALANDO DEPENDENCIAS PYTHON Y SISTEMA"
+print_step "Verificando compatibilidad con LCD ILI9486..."
+if lsmod | grep -q fb_ili9486; then
+    print_status "Driver fb_ili9486 detectado correctamente"
+    if [ -c /dev/fb1 ]; then
+        print_status "Framebuffer /dev/fb1 disponible"
+        # Configurar resolución del LCD
+        fbset -fb /dev/fb1 -g 480 320 480 320 16 > /dev/null 2>&1
+        print_status "LCD configurado a 480x320"
+    else
+        print_warning "Framebuffer /dev/fb1 no disponible"
+    fi
+else
+    print_warning "Driver fb_ili9486 no detectado - verifica conexión LCD"
+fi
+
+print_header "PASO 3: INSTALANDO DEPENDENCIAS PYTHON Y SISTEMA"
 
 print_step "Instalando Python y herramientas de desarrollo..."
 sudo apt install -y \
@@ -173,7 +199,7 @@ sudo apt install -y \
 spinner $!
 check_success "Dependencias de OpenCV instaladas"
 
-print_header "PASO 5: INSTALANDO DEPENDENCIAS NFC"
+print_header "PASO 4: INSTALANDO DEPENDENCIAS NFC"
 
 print_step "Instalando soporte para NFC/SmartCard..."
 sudo apt install -y \
@@ -190,7 +216,7 @@ sudo systemctl enable pcscd > /dev/null 2>&1
 sudo systemctl start pcscd > /dev/null 2>&1
 check_success "Servicio PCSC habilitado"
 
-print_header "PASO 6: CONFIGURANDO APLICACIÓN"
+print_header "PASO 5: CONFIGURANDO APLICACIÓN"
 
 print_step "Creando directorio de aplicación..."
 sudo mkdir -p "$APP_DIR"
@@ -221,32 +247,32 @@ else
     exit 1
 fi
 
-    # Crear directorio modelo si no existe
-    mkdir -p "$APP_DIR/modelo"
+# Crear directorio modelo si no existe
+mkdir -p "$APP_DIR/modelo"
 
-    # Copiar modelo si existe (buscar en diferentes ubicaciones)
-    if [ -f "modelo/best.onnx" ]; then
-        cp modelo/best.onnx "$APP_DIR/modelo/"
-        print_status "Modelo YOLO copiado"
-    elif [ -f "$SCRIPT_DIR/modelo/best.onnx" ]; then
-        cp "$SCRIPT_DIR/modelo/best.onnx" "$APP_DIR/modelo/"
-        print_status "Modelo YOLO copiado"
-    else
-        print_warning "Modelo YOLO no encontrado. Cópialo manualmente a $APP_DIR/modelo/best.onnx"
-    fi
+# Copiar modelo si existe (buscar en diferentes ubicaciones)
+if [ -f "modelo/best.onnx" ]; then
+    cp modelo/best.onnx "$APP_DIR/modelo/"
+    print_status "Modelo YOLO copiado"
+elif [ -f "$SCRIPT_DIR/modelo/best.onnx" ]; then
+    cp "$SCRIPT_DIR/modelo/best.onnx" "$APP_DIR/modelo/"
+    print_status "Modelo YOLO copiado"
+else
+    print_warning "Modelo YOLO no encontrado. Cópialo manualmente a $APP_DIR/modelo/best.onnx"
+fi
 
-    # Copiar credenciales Firebase si existen (buscar en diferentes ubicaciones)
-    if [ -f "config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json" ]; then
-        cp config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json "$APP_DIR/config/"
-        print_status "Credenciales Firebase copiadas"
-    elif [ -f "$SCRIPT_DIR/config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json" ]; then
-        cp "$SCRIPT_DIR/config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json" "$APP_DIR/config/"
-        print_status "Credenciales Firebase copiadas"
-    else
-        print_warning "Credenciales Firebase no encontradas. Cópialas manualmente a $APP_DIR/config/"
-    fi
+# Copiar credenciales Firebase si existen (buscar en diferentes ubicaciones)
+if [ -f "config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json" ]; then
+    cp config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json "$APP_DIR/config/"
+    print_status "Credenciales Firebase copiadas"
+elif [ -f "$SCRIPT_DIR/config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json" ]; then
+    cp "$SCRIPT_DIR/config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json" "$APP_DIR/config/"
+    print_status "Credenciales Firebase copiadas"
+else
+    print_warning "Credenciales Firebase no encontradas. Cópialas manualmente a $APP_DIR/config/"
+fi
 
-    check_success "Archivos de aplicación copiados"
+check_success "Archivos de aplicación copiados"
 else
     print_error "No se encontraron los archivos de la aplicación en $SCRIPT_DIR"
     print_info "Asegúrate de ejecutar este script desde el directorio que contiene:"
@@ -261,7 +287,7 @@ fi
 mkdir -p "$APP_DIR/logs"
 check_success "Directorio de logs creado"
 
-print_header "PASO 7: CONFIGURANDO ENTORNO VIRTUAL PYTHON"
+print_header "PASO 6: CONFIGURANDO ENTORNO VIRTUAL PYTHON"
 
 print_step "Creando entorno virtual Python..."
 cd "$APP_DIR"
@@ -293,7 +319,7 @@ print_step "Verificando instalaciones críticas..."
 python -c "import cv2, flask, socketio; print('Dependencias críticas OK')" > /dev/null 2>&1
 check_success "Verificación de dependencias completada"
 
-print_header "PASO 8: CREANDO ARCHIVO DE CONFIGURACIÓN"
+print_header "PASO 7: CREANDO ARCHIVO DE CONFIGURACIÓN"
 
 print_step "Creando archivo de configuración (.env)..."
 cat > "$APP_DIR/.env" << 'EOF'
@@ -387,7 +413,7 @@ EOF
 
 check_success "Archivo de configuración creado"
 
-print_header "PASO 9: CREANDO SCRIPTS DE INICIO"
+print_header "PASO 8: CREANDO SCRIPTS DE INICIO"
 
 print_step "Creando script de inicio de aplicación..."
 cat > "$APP_DIR/start_app.sh" << 'EOF'
@@ -487,15 +513,29 @@ done
 
 # Configurar framebuffer para LCD ILI9486
 export FRAMEBUFFER=/dev/fb1
-fbset -fb /dev/fb1 -g 480 320 480 320 16
+if [ -c /dev/fb1 ]; then
+    fbset -fb /dev/fb1 -g 480 320 480 320 16
+    log "✅ LCD ILI9486 configurado (/dev/fb1)"
+else
+    log "❌ LCD framebuffer no disponible, usando display principal"
+    export FRAMEBUFFER=/dev/fb0
+fi
 
-log "✅ LCD ILI9486 configurado (/dev/fb1)"
+# Verificar que X11 esté funcionando
+if ! xset q &>/dev/null; then
+    log "⚠️ X11 no disponible, intentando iniciar..."
+    # Intentar iniciar X11 mínimo
+    if command -v startx &> /dev/null; then
+        startx &
+        sleep 5
+    fi
+fi
 
 # Intentar con diferentes navegadores para LCD
 log "🚀 Iniciando navegador para LCD ILI9486..."
 
 # Opción 1: Midori (mejor para LCD pequeño)
-if command -v midori &> /dev/null; then
+if command -v midori &> /dev/null && xset q &>/dev/null; then
     log "📱 Usando Midori para LCD..."
     midori \
         -e Fullscreen \
@@ -507,7 +547,7 @@ if command -v midori &> /dev/null; then
     log "✅ Midori iniciado (PID: $BROWSER_PID)"
 
 # Opción 2: Chromium optimizado para LCD
-else
+elif command -v chromium-browser &> /dev/null && xset q &>/dev/null; then
     log "🌐 Usando Chromium para LCD..."
     chromium-browser \
         --kiosk \
@@ -535,6 +575,21 @@ else
     BROWSER_PID=$!
     echo $BROWSER_PID > "$APP_DIR/browser.pid"
     log "✅ Chromium iniciado (PID: $BROWSER_PID)"
+
+# Opción 3: Navegador de texto con framebuffer (fallback)
+elif command -v links2 &> /dev/null; then
+    log "📄 Usando Links2 como fallback..."
+    links2 -g -mode 480x320x16 "$URL" >> "$LOG_FILE" 2>&1 &
+
+    BROWSER_PID=$!
+    echo $BROWSER_PID > "$APP_DIR/browser.pid"
+    log "✅ Links2 iniciado (PID: $BROWSER_PID)"
+
+else
+    log "❌ No se encontró navegador compatible"
+    log "💡 La aplicación web está disponible en: $URL"
+    log "🌐 Accede desde otro dispositivo en la red"
+    exit 1
 fi
 
 # Mantener el script corriendo
@@ -544,7 +599,7 @@ EOF
 chmod +x "$APP_DIR/start_kiosk.sh"
 check_success "Script de inicio de kiosk creado"
 
-print_header "PASO 10: CONFIGURANDO SERVICIOS SYSTEMD"
+print_header "PASO 9: CONFIGURANDO SERVICIOS SYSTEMD"
 
 print_step "Creando servicio de aplicación..."
 sudo tee /etc/systemd/system/reciclaje-app.service > /dev/null << EOF
@@ -602,7 +657,7 @@ sudo systemctl enable reciclaje-app
 sudo systemctl enable reciclaje-kiosk
 check_success "Servicios habilitados"
 
-print_header "PASO 11: CONFIGURANDO AUTOARRANQUE"
+print_header "PASO 10: CONFIGURANDO AUTOARRANQUE"
 
 print_step "Configurando autologin..."
 sudo systemctl set-default graphical.target
@@ -631,7 +686,7 @@ EOF
 
 check_success "Inicio automático configurado"
 
-print_header "PASO 12: OPTIMIZANDO RASPBERRY PI"
+print_header "PASO 11: OPTIMIZANDO RASPBERRY PI"
 
 print_step "Configurando memoria GPU..."
 if ! grep -q "gpu_mem=" /boot/config.txt; then
@@ -701,7 +756,7 @@ if ! grep -q "dtparam=watchdog=on" /boot/config.txt; then
 fi
 check_success "Watchdog configurado"
 
-print_header "PASO 13: CREANDO SCRIPTS DE GESTIÓN"
+print_header "PASO 12: CREANDO SCRIPTS DE GESTIÓN"
 
 print_step "Creando script de gestión..."
 cat > "$APP_DIR/manage.sh" << 'EOF'
@@ -781,7 +836,7 @@ EOF
 chmod +x "$APP_DIR/manage.sh"
 check_success "Script de gestión creado"
 
-print_header "PASO 14: CONFIGURACIÓN FINAL"
+print_header "PASO 13: CONFIGURACIÓN FINAL"
 
 print_step "Ajustando permisos..."
 sudo chown -R ramsi:ramsi "$APP_DIR"
