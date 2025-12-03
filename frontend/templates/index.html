@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reciclaje Inteligente</title>
+    <title>RecompensaTEC</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="shortcut icon" href="../static/images/logo.png" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -15,7 +16,7 @@
             <div class="header-content">
                 <div class="logo">
                     <i class="fas fa-recycle"></i>
-                    <h1>Reciclaje Inteligente</h1>
+                    <h1>RecompensaTEC</h1>
                 </div>
             </div>
         </header>
@@ -44,6 +45,14 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Botón de vinculación NFC fuera de la cámara -->
+                    <div class="nfc-link-section">
+                        <button class="btn btn-nfc" id="nfc-link-btn" onclick="openNfcLinkModal()">
+                            <i class="fas fa-link"></i>
+                            Vincular Llavero NFC
+                        </button>
                     </div>
                 </div>
             </section>
@@ -77,7 +86,7 @@
                             </div>
                             <i class="fas fa-credit-card nfc-icon"></i>
                         </div>
-                        <h4>Acerca tu tarjeta NFC</h4>
+                        <h4>Acerca tu llavero NFC</h4>
                         <p>Para completar el proceso de reciclaje</p>
                     </div>
                 </div>
@@ -131,6 +140,109 @@
                     <button class="btn btn-primary" onclick="closeModal('error-modal')">
                         Cerrar
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Vinculación NFC -->
+        <div class="modal" id="nfc-link-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Vincular Llavero NFC</h2>
+                    <i class="fas fa-link nfc-link-icon"></i>
+                    <button class="modal-close" onclick="closeNfcLinkModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="nfc-link-steps" id="nfc-step-1">
+                        <div class="step-header">
+                            <div class="step-number">1</div>
+                            <h3>Ingresa tu PIN</h3>
+                        </div>
+                        <div class="pin-input-container">
+                            <input type="password"
+                                   id="user-pin"
+                                   class="pin-input"
+                                   placeholder="Ingresa tu PIN de 6 dígitos"
+                                   maxlength="6"
+                                   pattern="[0-9]{6}">
+                            <button class="btn btn-primary" onclick="validatePin()">
+                                <i class="fas fa-search"></i>
+                                Buscar Usuario
+                            </button>
+                        </div>
+                        <div class="pin-error" id="pin-error" style="display: none;">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>PIN no válido o usuario no encontrado</span>
+                        </div>
+                    </div>
+
+                    <div class="nfc-link-steps" id="nfc-step-2" style="display: none;">
+                        <div class="step-header">
+                            <div class="step-number">2</div>
+                            <h3>Usuario Encontrado</h3>
+                        </div>
+                        <div class="user-found">
+                            <div class="user-avatar">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="user-details">
+                                <h4 id="found-user-name">Usuario</h4>
+                                <p id="found-user-email">email@ejemplo.com</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-success" onclick="startNfcReading()">
+                            <i class="fas fa-arrow-right"></i>
+                            Continuar
+                        </button>
+                    </div>
+
+                    <div class="nfc-link-steps" id="nfc-step-3" style="display: none;">
+                        <div class="step-header">
+                            <div class="step-number">3</div>
+                            <h3>Acerca tu Llavero NFC</h3>
+                        </div>
+                        <div class="nfc-reading-animation">
+                            <div class="nfc-waves">
+                                <div class="wave"></div>
+                                <div class="wave"></div>
+                                <div class="wave"></div>
+                            </div>
+                            <i class="fas fa-key nfc-key-icon"></i>
+                        </div>
+                        <p class="nfc-instruction" id="nfc-instruction">Mantén el llavero cerca del lector NFC</p>
+                        <div class="nfc-simulation-notice" id="nfc-simulation-notice" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>No hay lector NFC conectado</span>
+                        </div>
+                        <div class="nfc-status" id="nfc-status">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            Esperando llavero NFC...
+                        </div>
+                        <button class="btn btn-secondary" onclick="cancelNfcReading()">
+                            Cancelar
+                        </button>
+                    </div>
+
+                    <div class="nfc-link-steps" id="nfc-step-4" style="display: none;">
+                        <div class="step-header">
+                            <div class="step-number">✓</div>
+                            <h3>¡Vinculación Exitosa!</h3>
+                        </div>
+                        <div class="success-animation">
+                            <i class="fas fa-check-circle success-large"></i>
+                        </div>
+                        <div class="link-success-info">
+                            <p><strong id="linked-user-name">Usuario</strong></p>
+                            <p>Llavero NFC vinculado correctamente</p>
+                            <p class="nfc-uid">UID: <span id="linked-nfc-uid">XXXXXXXXXXXX</span></p>
+                        </div>
+                        <button class="btn btn-primary" onclick="closeNfcLinkModal()">
+                            <i class="fas fa-check"></i>
+                            Finalizar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

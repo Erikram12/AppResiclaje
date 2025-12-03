@@ -32,7 +32,7 @@ Una aplicación web moderna para Raspberry Pi que utiliza inteligencia artificia
 ### Hardware
 - **Raspberry Pi 4** (recomendado) o Raspberry Pi 3B+
 - **Cámara USB** o Raspberry Pi Camera Module
-- **Lector NFC** compatible con PC/SC (PN532, ACR122U, etc.)
+- **Lector NFC** compatible con PC/SC ACR122U.
 - **Pantalla** (HDMI, táctil opcional)
 - **Tarjeta microSD** de al menos 32GB (Clase 10)
 
@@ -46,45 +46,19 @@ Una aplicación web moderna para Raspberry Pi que utiliza inteligencia artificia
 
 ```bash
 # Copiar todos los archivos del proyecto a la Raspberry Pi
-scp -r AppResiclaje/ ramsi@IP_RASPBERRY:/home/ramsi/
-
 # Conectar por SSH a la Raspberry Pi
 ssh ramsi@IP_RASPBERRY
 cd /home/ramsi/AppResiclaje
 ```
 
-### 2️⃣ Ejecutar Instalación Única
+### 3️⃣ Archivos Opcionales
 
 ```bash
-# Hacer ejecutable el instalador
-chmod +x install_reciclaje_pi.sh
+# Copiar modelo YOLO
+cp tu_modelo.onnx /home/ramsi/AppResiclaje/modelo/best.onnx
 
-# Ejecutar instalación completa (¡UN SOLO COMANDO!)
-./install_reciclaje_pi.sh
-```
-
-**¡ESO ES TODO!** 🎉
-
-El script automáticamente:
-- ✅ Instala X11 y entorno gráfico mínimo
-- ✅ Instala Chromium Browser
-- ✅ Instala todas las dependencias Python
-- ✅ Configura OpenCV y YOLO
-- ✅ Instala soporte NFC
-- ✅ Crea la aplicación web
-- ✅ Configura servicios systemd
-- ✅ Configura autoarranque completo
-- ✅ Optimiza Raspberry Pi
-- ✅ Crea scripts de gestión
-
-### 3️⃣ Archivos Opcionales (si los tienes)
-
-```bash
-# Copiar modelo YOLO (si ya lo tienes entrenado)
-cp tu_modelo.onnx /home/ramsi/reciclaje-app/modelo/best.onnx
-
-# Copiar credenciales Firebase (si ya las tienes)
-cp firebase-credentials.json /home/ramsi/reciclaje-app/config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json
+# Copiar credenciales Firebase
+cp firebase-credentials.json /home/ramsi/AppResiclaje/config/resiclaje-39011-firebase-adminsdk-fbsvc-433ec62b6c.json
 ```
 
 ### 4️⃣ Reiniciar y Listo
@@ -92,36 +66,6 @@ cp firebase-credentials.json /home/ramsi/reciclaje-app/config/resiclaje-39011-fi
 ```bash
 sudo reboot
 ```
-
-## 🎮 Uso Diario
-
-### Comandos de Gestión Rápida
-
-```bash
-cd /home/ramsi/reciclaje-app
-
-# Control básico
-./manage.sh start      # Iniciar aplicación
-./manage.sh stop       # Detener aplicación  
-./manage.sh restart    # Reiniciar aplicación
-./manage.sh status     # Ver estado
-
-# Monitoreo
-./manage.sh logs       # Ver todos los logs
-./manage.sh logs-app   # Solo logs del backend
-./manage.sh logs-kiosk # Solo logs del navegador
-
-# Diagnóstico
-./manage.sh test-camera  # Probar cámara
-./manage.sh test-nfc     # Probar NFC
-./manage.sh check-temp   # Ver temperatura CPU
-
-# Mantenimiento
-./manage.sh update     # Actualizar dependencias
-./manage.sh enable     # Habilitar autoarranque
-./manage.sh disable    # Deshabilitar autoarranque
-```
-
 ### Acceso Web
 
 - **En la Raspberry Pi**: Se abre automáticamente en Chromium
@@ -131,7 +75,7 @@ cd /home/ramsi/reciclaje-app
 
 ```
 AppResiclaje/
-├── backend/                    # Servidor Flask + WebSocket
+├── backend/                   # Servidor Flask + WebSocket
 │   └── app.py                 # Aplicación principal
 ├── frontend/                  # Interfaz web moderna
 │   ├── templates/
@@ -141,10 +85,9 @@ AppResiclaje/
 │       └── js/app.js         # Cliente WebSocket
 ├── config/                   # Configuración
 │   ├── app_config.py        # Configuración Python
-│   └── environment.env      # Variables de entorno ejemplo
-├── modelo/                  # Modelo YOLO (copiar aquí)
+│   └── environment.env      # Variables de entorno
+├── modelo/                  # Modelo YOLO
 ├── requirements.txt         # Dependencias Python
-├── install_reciclaje_pi.sh  # ⭐ INSTALADOR ÚNICO
 └── README.md               # Esta documentación
 ```
 
@@ -153,8 +96,6 @@ AppResiclaje/
 ### Editar Configuración
 
 ```bash
-# Editar configuración principal
-nano /home/ramsi/reciclaje-app/.env
 
 # Configuraciones importantes:
 MQTT_BROKER=tu-broker.com
@@ -179,102 +120,6 @@ opensc-tool --list-readers
 vcgencmd measure_temp
 ```
 
-## 🐛 Solución de Problemas
-
-### Problemas Comunes y Soluciones Rápidas
-
-#### 1. La aplicación no inicia
-```bash
-# Ver logs detallados
-./manage.sh logs
-
-# Verificar servicios
-./manage.sh status
-
-# Reiniciar servicios
-./manage.sh restart
-```
-
-#### 2. Chromium no se abre
-```bash
-# Verificar que X11 está corriendo
-sudo systemctl status lightdm
-
-# Reiniciar entorno gráfico
-sudo systemctl restart lightdm
-
-# Ver logs específicos del kiosk
-./manage.sh logs-kiosk
-```
-
-#### 3. Cámara no funciona
-```bash
-# Probar cámara
-./manage.sh test-camera
-
-# Verificar diferentes índices
-nano /home/ramsi/reciclaje-app/.env
-# Cambiar: CAMERA_INDEX=1 (o 2, 3, etc.)
-```
-
-#### 4. NFC no detecta tarjetas
-```bash
-# Probar NFC
-./manage.sh test-nfc
-
-# Reiniciar servicio PCSC
-sudo systemctl restart pcscd
-
-# Verificar permisos
-sudo usermod -a -G scard ramsi
-```
-
-#### 5. Problemas de conectividad
-```bash
-# Verificar red
-ping google.com
-
-# Verificar servidor web local
-curl http://localhost:5000
-
-# Verificar puertos
-netstat -tlnp | grep :5000
-```
-
-## 📊 Monitoreo del Sistema
-
-### Logs Importantes
-
-```bash
-# Logs de la aplicación
-tail -f /home/ramsi/reciclaje-app/logs/app.log
-tail -f /home/ramsi/reciclaje-app/logs/startup.log
-tail -f /home/ramsi/reciclaje-app/logs/kiosk.log
-
-# Logs del sistema
-sudo journalctl -u reciclaje-app -f
-sudo journalctl -u reciclaje-kiosk -f
-```
-
-### Rendimiento
-
-```bash
-# Temperatura CPU
-./manage.sh check-temp
-
-# Uso de recursos
-htop
-
-# Espacio en disco
-df -h
-
-# Memoria
-free -h
-```
-
-## 🔒 Seguridad y Mantenimiento
-
-### Actualizaciones Regulares
 
 ```bash
 # Actualizar sistema
@@ -285,16 +130,6 @@ sudo apt update && sudo apt upgrade -y
 
 # Reiniciar después de actualizaciones importantes
 sudo reboot
-```
-
-### Backup de Configuración
-
-```bash
-# Hacer backup de configuración
-cp /home/ramsi/reciclaje-app/.env /home/ramsi/reciclaje-app/.env.backup
-
-# Backup de logs importantes
-tar -czf backup-logs-$(date +%Y%m%d).tar.gz /home/ramsi/reciclaje-app/logs/
 ```
 
 ## 🎯 Funcionalidades de la Interfaz
@@ -311,28 +146,5 @@ tar -czf backup-logs-$(date +%Y%m%d).tar.gz /home/ramsi/reciclaje-app/logs/
 3. **NFC**: Acerca tarjeta NFC al lector
 4. **Confirmación**: Modal de éxito con puntos ganados
 5. **Repetir**: Sistema listo para siguiente detección
-
-## 🤝 Soporte
-
-### Si tienes problemas:
-
-1. **Revisa los logs**: `./manage.sh logs`
-2. **Verifica el estado**: `./manage.sh status`
-3. **Prueba hardware**: `./manage.sh test-camera` y `./manage.sh test-nfc`
-4. **Reinicia servicios**: `./manage.sh restart`
-5. **Reinicia sistema**: `sudo reboot`
-
-### Archivos importantes para soporte:
-- `/home/ramsi/reciclaje-app/.env` - Configuración
-- `/home/ramsi/reciclaje-app/logs/` - Logs de la aplicación
-- `/var/log/syslog` - Logs del sistema
-
----
-
-## 🎉 ¡Instalación en 3 Pasos!
-
-1. **Copiar archivos** a Raspberry Pi
-2. **Ejecutar** `./install_reciclaje_pi.sh`
-3. **Reiniciar** con `sudo reboot`
 
 **¡Hecho con ❤️ para un mundo más sostenible! 🌍♻️**
